@@ -19,7 +19,7 @@ frontend:
     path: /
     pathType: Prefix
   containerPort: 80
-  image: YOUR_DOCKERHUB/sausage-frontend:latest
+  image: treasuremeasure/my-angular-app:latest
   resources:
     requests:
       memory: "128Mi"
@@ -46,7 +46,7 @@ backend:
   replicas: 1
   strategy:
   ### Опишите стратегию RollingUpdate для бэкенда
-  image: YOUR_DOCKERHUB/sausage-backend:latest
+  image: treasuremeasure/my-java-app:latest
   imagePullPolicy: Always
   resources:
     requests:
@@ -62,6 +62,19 @@ backend:
   ### Опишите VPA для бэкенда
 
 backend-report:
+  env:
+    PORT: 8081
+    DB: mongodb://mongodb:27017/sausage-store       #mongodb://reports:reportspassword@mongodb:27017/sausage-store
+  strategy:
+    type: Recreate
+  revisionHistoryLimit: 15
+  replicas: 1
+  annotations:
+    path: /actuator/prometheus
+    port: "8080"
+    scrape: "true"
+  image: treasuremeasure/my-go-app:latest
+  
 ### Опишите значения для backend-report
 ### Приложение должно использовать стратегию Recreate
 ### Приложение использует переменную PORT - порт, на котором оно запустится и DB - Uri-подключение к mongodb. 
@@ -70,7 +83,10 @@ backend-report:
 
 infra:
   postgresql:
-  ### Опишите необходимые переменные для развертывания PostgresQL в кластере Kubernetes
+    env:
+      POSTGRES_USER: store
+      POSTGRES_PASSWORD: storepassword
+      POSTGRES_DB: sausage-store
   mongodb:
     env:
       MONGO_INITDB_ROOT_USERNAME: root

@@ -1,0 +1,36 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{.Release.Name}}-{{.Chart.Name}}
+  labels:
+    app.kubernetes.io/name: {{.Chart.Name}}
+    app.kubernetes.io/instance: "{{.Release.Name}}"
+    app.kubernetes.io/version: "{{.Chart.AppVersion}}"
+    app.kubernetes.io/managed-by: "{{.Release.Service}}"
+    helm.sh/chart: "{{.Chart.Name}}-{{.Chart.Version}}"
+    app.kubernetes.io/component: {{.Chart.Name}}
+    app.kubernetes.io/part-of: {{.Release.Name}}
+spec:
+  revisionHistoryLimit: {{.Values.revisionHistoryLimit}}
+  replicas: {{.Values.replicas}}
+  selector:
+    matchLabels:
+      app: {{.Release.Name}}-{{.Chart.Name}}
+  template:
+    metadata:
+      annotations:
+        prometheus.io/path: {{.Values.annotations.path}}
+        prometheus.io/port: "{{.Values.annotations.port}}"
+        prometheus.io/scrape: "{{.Values.annotations.scrape}}"
+      labels:
+        app: {{.Release.Name}}-{{.Chart.Name}}
+    spec:
+      containers:
+        - name: {{.Chart.Name}}
+          image: {{ .Values.image }}
+          env:  
+            - name: PORT
+              value: {{ .Values.env.PORT }}
+            - name: DB
+              value: {{ .Values.env.DB }}
