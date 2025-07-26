@@ -1,0 +1,46 @@
+annotations:
+    path: /actuator/prometheus
+    port: "8080"
+    scrape: "true"
+env:
+    postgresUri: jdbc:postgresql://postgresql:5432/sausage-store
+    postgresUser: store
+    postgresPassword: storepassword
+    reportPath: /logs/reports
+    logPath: /logs
+service:
+    port: 8080
+revisionHistoryLimit: 15
+replicas: 1
+strategy:
+### Опишите стратегию RollingUpdate для бэкенда
+image: treasuremeasure/my-java-app:latest
+imagePullPolicy: Always
+resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "1"
+containerPort: 8080
+livenessProbe:
+  httpGet:
+    path: /actuator/health        # стандартная точка Spring Boot
+    port: 8080                    # = containerPort
+  initialDelaySeconds: 30         # под успеет запуститься и поднять контекст
+  periodSeconds: 10               # проверяем каждые 10 с
+  timeoutSeconds: 5               # запрос должен уложиться в 5 с
+  failureThreshold: 3             # 3 фейла подряд → kube‑restart
+  successThreshold: 1      
+### Опишите LivenessProbe для бэкенда
+vpa:
+  enabled: true
+  updateMode: "Auto"         # «сама» корректирует ресурсы
+  minAllowed:                # не опускаться ниже requests
+    cpu: "100m"
+    memory: "256Mi"
+  maxAllowed:                # и не разрастись больше limits
+    cpu: "1"                 # = 1 vCPU
+    memory: "512Mi"
+### Опишите VPA для бэкенда
