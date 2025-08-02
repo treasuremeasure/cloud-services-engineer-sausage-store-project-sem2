@@ -1,0 +1,14 @@
+infra:
+  postgresql:
+    env:
+      POSTGRES_USER: store
+      POSTGRES_PASSWORD: storepassword
+      POSTGRES_DB: sausage-store
+    image: postgres:14.18
+    containerPort: 5432
+  mongodb:
+    env:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: rootpassword
+    image: arm64v8/mongo:latest
+    containerPort: 27017

@@ -58,13 +58,18 @@ spec:
                 configMapKeyRef:
                   name: {{ .Release.Name }}-{{ .Chart.Name }}-conf
                   key: log_path
+            - name: SPRING_CLOUD_VAULT_ENABLED
+              value: "false"
           resources:
 {{ toYaml .Values.resources | indent 12 }}
           ports:
             - name: {{ .Chart.Name }}
               containerPort: {{ .Values.containerPort }}
+
+{{- if .Values.livenessProbe }}
           livenessProbe:
 {{ toYaml .Values.livenessProbe | indent 12 }}
+{{- end }}
 
       volumes:
         - name: {{ .Release.Name }}-{{ .Chart.Name }}-conf

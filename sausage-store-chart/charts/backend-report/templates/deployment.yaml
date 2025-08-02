@@ -1,4 +1,3 @@
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -31,6 +30,6 @@ spec:
           image: {{ .Values.image }}
           env:  
             - name: PORT
-              value: {{ .Values.env.PORT }}
+              value: "{{ .Values.env.PORT }}"
             - name: DB
-              value: {{ .Values.env.DB }}
+              value: "{{ .Values.env.DB }}"

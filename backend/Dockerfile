@@ -1,31 +1,40 @@
-#Это так называемый мультистейдж docker-файл. Сначала делаем образ, который соберёт нам java-приложение,
-#а затем из него берём собранный артефакт и кладём его в новый образ, чтобы оставить в нём меньше лишнего
+# syntax=docker/dockerfile:1.4
 
-# build
-FROM maven:3.8.2-openjdk-16-slim AS build
-# задаём переменную VERSION, которая будет использоваться для сборки проекта
-ARG VERSION=${VERSION}
-WORKDIR /usr/src/app
-COPY ./src ./src
-COPY *.xml ./
+############################
+# 1.  BUILD  (Maven) stage #
+############################
+FROM --platform=${BUILDPLATFORM} maven:3.8.2-openjdk-16-slim AS build
 
-RUN mvn package -Dversion.application=${VERSION}
+ARG VERSION=dev
+WORKDIR /src
 
-# release
-FROM openjdk:16-jdk-alpine
-ARG VERSION=${VERSION}
+# сначала тянем зависимости — хороший кеш‑слой
+COPY pom.xml .
+RUN mvn -B dependency:go-offline
+
+# копируем исходники и собираем
+COPY src ./src
+RUN mvn -B package -DskipTests -Dversion.application=${VERSION}
+
+############################
+# 2.  RUNTIME stage (JRE)  #
+############################
+FROM --platform=${TARGETPLATFORM} amazoncorretto:17-alpine3.18
+
+ARG VERSION=dev
 WORKDIR /app
-# создаём пользователя jaruser
-RUN addgroup --system jaruser \
-    && adduser -S -s /bin/false -G jaruser jaruser -D -H \
-    && apk add --no-cache dumb-init==1.2.5-r0 \
-    && apk add --update curl \
-    && rm -rf /var/cache/apk/* \
-    && mkdir -p /logs/reports \
-    && chown -R jaruser:jaruser /logs
+
+# создаём не‑root пользователя
+RUN addgroup -S jaruser \
+ && adduser  -S jaruser -G jaruser \
+ && apk add --no-cache dumb-init curl \
+ && mkdir -p /logs/reports \
+ && chown -R jaruser:jaruser /logs /app
+
+# копируем JAR из build‑стадии
 COPY --chown=jaruser:jaruser \
-     --from=build /usr/src/app/target/sausage-store-${VERSION}.jar ./sausage-store.jar
+     --from=build /src/target/sausage-store-${VERSION}.jar /app/sausage-store.jar
+
 EXPOSE 8080
-# приложение будет запускаться под пользователем jaruser
 USER jaruser
-ENTRYPOINT ["dumb-init", "java", "-jar", "-Dmyserver.bindPort=8080", "./sausage-store.jar"]
+ENTRYPOINT ["dumb-init","java","-jar","-Dmyserver.bindPort=8080","/app/sausage-store.jar"]

@@ -1,22 +1,22 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: postgres
+  name: postgresql
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: postgres
+      app: postgresql
   template:
     metadata:
       labels:
-        app: postgres
+        app: postgresql
     spec:
       containers:
-        - name: postgres
-          image: postgres:14
+        - name: postgresql
+          image: {{.Values.infra.postgresql.image}}
           ports:
-            - containerPort: 5432
+            - containerPort: {{ .Values.infra.postgresql.containerPort }}
           env:
             - name: POSTGRES_USER
               value: {{ .Values.infra.postgresql.env.POSTGRES_USER }}
@@ -24,5 +24,17 @@ spec:
               value: {{ .Values.infra.postgresql.env.POSTGRES_PASSWORD }}
             - name: POSTGRES_DB
               value: {{ .Values.infra.postgresql.env.POSTGRES_DB }}
-  
-
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgresql
+  labels:
+    app: postgresql
+spec:
+  ports:
+  - port: {{ .Values.infra.postgresql.containerPort }}
+    targetPort: {{ .Values.infra.postgresql.containerPort }}
+  selector:
+    app: postgresql
+  type: ClusterIP

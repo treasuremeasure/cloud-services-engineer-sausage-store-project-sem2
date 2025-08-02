@@ -1,0 +1,14 @@
+env:
+    PORT: "8081"
+    DB: mongodb://mongodb:27017/sausage-store       #mongodb://reports:reportspassword@mongodb:27017/sausage-store
+strategy:
+    type: Recreate
+revisionHistoryLimit: 15
+replicas: 1
+annotations:
+    path: /actuator/prometheus
+    port: "8080"
+    scrape: "true"
+image: treasuremeasure/my-go-app:latest
+service:
+    port: 8082
