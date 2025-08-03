@@ -60,6 +60,11 @@ spec:
                   key: log_path
             - name: SPRING_CLOUD_VAULT_ENABLED
               value: "false"
+            - name: SPRING_DATA_MONGODB_URI
+              valueFrom:
+                secretKeyRef:
+                   name: mongo-conn
+                   key: uri
           resources:
 {{ toYaml .Values.resources | indent 12 }}
           ports:
