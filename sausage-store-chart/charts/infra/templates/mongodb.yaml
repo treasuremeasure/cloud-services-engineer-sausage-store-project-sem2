@@ -29,6 +29,7 @@ spec:
             cpu: "50m"
           limits:
             memory: "256Mi"
+            cpu: "200m"
         volumeMounts:
         - name: mongodb-data
           mountPath: /data/db
@@ -44,7 +45,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: mongodb
+  name: mongodb-service
   labels:
     app: mongodb
 spec:

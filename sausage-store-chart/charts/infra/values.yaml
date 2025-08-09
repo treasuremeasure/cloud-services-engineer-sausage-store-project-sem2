@@ -10,5 +10,5 @@ infra:
     env:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: rootpassword
-    image: arm64v8/mongo:latest
+    image: mongo:latest
     containerPort: 27017

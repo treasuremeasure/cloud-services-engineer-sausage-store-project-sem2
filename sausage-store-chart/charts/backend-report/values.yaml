@@ -12,3 +12,10 @@ annotations:
 image: treasuremeasure/my-go-app:latest
 service:
     port: 8082
+resources:
+    requests:
+      memory: "256Mi"
+      cpu: "500m"
+    limits:
+      memory: "256Mi"
+      cpu: "1"

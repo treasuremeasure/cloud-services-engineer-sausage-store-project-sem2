@@ -28,6 +28,8 @@ spec:
       containers:
         - name: {{.Chart.Name}}
           image: {{ .Values.image }}
+          resources:
+{{ toYaml .Values.resources | indent 12 }} 
           env:  
             - name: PORT
               value: "{{ .Values.env.PORT }}"

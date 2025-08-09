@@ -3,7 +3,7 @@ annotations:
     port: "8080"
     scrape: "true"
 env:
-    postgresUri: jdbc:postgresql://postgresql:5432/sausage-store
+    postgresUri: jdbc:postgresql://postgresql-service:5432/sausage-store
     postgresUser: store
     postgresPassword: storepassword
     reportPath: /logs/reports
@@ -22,7 +22,7 @@ imagePullPolicy: Always
 resources:
     requests:
       memory: "256Mi"
-      cpu: "100m"
+      cpu: "500m"
     limits:
       memory: "512Mi"
       cpu: "1"
