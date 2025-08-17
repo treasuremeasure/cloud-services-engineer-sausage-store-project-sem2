@@ -1,21 +1,27 @@
-  replicas: 1
-  revisionHistoryLimit: 15
-  strategy:
-    type: Recreate
-  service:
-    port: 80
-  ingress:
-    host: localhost              #YOUR_STUDENT_HOSTNAME.students-projects.ru # Корректный домен будет указан в задании
-    path: /
-    pathType: Prefix
-  containerPort: 80
-  image: treasuremeasure/my-angular-app:latest
-  resources:
-    requests:
-      memory: "128Mi"
-      cpu: "100m"
-    limits:
-      memory: "128Mi"
-      cpu: "1"
-  nginxConf: nginx.conf
-  imagePullPolicy: Always
+replicas: 1
+revisionHistoryLimit: 15
+strategy:
+  type: Recreate
+
+service:
+  port: 80
+
+ingress:
+  host: front-rizaorduhani.2sem.students-projects.ru
+  path: /
+  pathType: Prefix
+
+containerPort: 80
+image: treasuremeasure/my-angular-app:latest
+imagePullPolicy: IfNotPresent   # можно оставить Always, но для учебного кластера так быстрее
+
+# скромные ресурсы, чтобы пройти квоты
+resources:
+  requests:
+    cpu: "200m"
+    memory: "164Mi"
+  limits:
+    cpu: "200m"
+    memory: "256Mi"
+
+nginxConf: nginx.conf
