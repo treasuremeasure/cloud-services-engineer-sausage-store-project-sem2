@@ -32,10 +32,7 @@ spec:
           ports:
             - name: http
               containerPort: {{ .Values.containerPort }}
-          # ресурсы из values (важно: nindent 12)
-          resources:
-{{- toYaml .Values.resources | nindent 12 }}
-          # health-checks для nginx (не обязательно, но полезно)
+          resources: {{- toYaml .Values.resources | nindent 12 }}
           readinessProbe:
             httpGet:
               path: /

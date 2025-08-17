@@ -7,10 +7,10 @@ metadata:
 spec:
   type: ClusterIP
   selector:
-    app: {{ .Release.Name }}-{{ .Chart.Name }}   # должен совпадать с .spec.template.metadata.labels в Deployment
+    app: {{ .Release.Name }}-{{ .Chart.Name }}   
   ports:
-    - port: {{ .Values.service.port }}              # порт сервиса, на который смотрит Ingress
-      targetPort: {{ .Values.service.port }}       # порт контейнера (или имя порта, если именованный)
+    - port: {{ .Values.service.port }}             
+      targetPort: {{ .Values.service.port }}       
 
 
   
