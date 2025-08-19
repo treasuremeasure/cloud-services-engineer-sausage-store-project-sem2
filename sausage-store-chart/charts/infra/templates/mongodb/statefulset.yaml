@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ .Release.Name }}-mongodb
+  labels:
+    app: mongodb
+spec:
+  serviceName: mongodb-service
+  replicas: {{ .Values.infra.mongodb.replicas }}
+  selector:
+    matchLabels:
+      app: mongodb
+  template:
+    metadata:
+      labels:
+        app: mongodb
+    spec:
+      containers:
+        - name: mongodb
+          image: {{ .Values.infra.mongodb.image }}
+          imagePullPolicy: {{ default "IfNotPresent" .Values.infra.mongodb.imagePullPolicy }}
+          ports:
+            - name: mongo
+              containerPort: {{ .Values.infra.mongodb.containerPort }}
+          env:
+            - name: MONGO_INITDB_ROOT_USERNAME
+              value: {{ .Values.infra.mongodb.env.MONGO_INITDB_ROOT_USERNAME | quote }}
+            - name: MONGO_INITDB_ROOT_PASSWORD
+              value: {{ .Values.infra.mongodb.env.MONGO_INITDB_ROOT_PASSWORD | quote }}
+          resources:
+{{- toYaml .Values.infra.mongodb.resources | nindent 12 }}
+          volumeMounts:
+            - name: mongodb-data
+              mountPath: /data/db
+  volumeClaimTemplates:
+    - metadata:
+        name: mongodb-data
+      spec:
+        accessModes:
+          - {{ .Values.infra.mongodb.storage.accessMode | quote }}
+{{- if .Values.infra.mongodb.storage.storageClassName }}
+        storageClassName: {{ .Values.infra.mongodb.storage.storageClassName }}
+{{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.infra.mongodb.storage.size }}

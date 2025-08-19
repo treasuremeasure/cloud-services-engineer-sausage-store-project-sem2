@@ -5,6 +5,11 @@ strategy:
     type: Recreate
 revisionHistoryLimit: 15
 replicas: 1
+strategy:
+ type: Recreate
+ rollingUpdate:
+    maxUnavailable: 1
+    maxSurge: 1
 annotations:
     path: /actuator/prometheus
     port: "8080"

@@ -5,9 +5,10 @@ metadata:
   labels:
     app: postgresql
 spec:
+  clusterIP: None   
   ports:
-  - port: {{ .Values.infra.postgresql.containerPort }}
-    targetPort: {{ .Values.infra.postgresql.containerPort }}
+    - port: {{ .Values.infra.postgresql.containerPort }}
+      targetPort: {{ .Values.infra.postgresql.containerPort }}
+      name: postgres
   selector:
     app: postgresql
-  type: ClusterIP

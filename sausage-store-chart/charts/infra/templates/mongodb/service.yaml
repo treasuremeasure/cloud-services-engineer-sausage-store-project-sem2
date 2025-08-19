@@ -5,9 +5,10 @@ metadata:
   labels:
     app: mongodb
 spec:
+  clusterIP: None
   ports:
-  - port: {{ .Values.infra.mongodb.containerPort }}
-    targetPort: {{ .Values.infra.mongodb.containerPort }}
+    - port: {{ .Values.infra.mongodb.containerPort }}
+      targetPort: {{ .Values.infra.mongodb.containerPort }}
+      name: mongo
   selector:
     app: mongodb
-  type: ClusterIP

@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ .Release.Name }}-postgresql
+  labels:
+    app: postgresql
+spec:
+  serviceName: postgresql            # Убедись, что есть headless Service с таким именем и selector app: postgresql
+  replicas: {{ .Values.infra.postgresql.replicas }}
+  selector:
+    matchLabels:
+      app: postgresql
+  template:
+    metadata:
+      labels:
+        app: postgresql
+    spec:
+      securityContext:
+        runAsUser: 999               # postgres
+        runAsGroup: 999
+        fsGroup: 999                 # важно для прав на PV
+      containers:
+        - name: postgresql
+          image: {{ .Values.infra.postgresql.image }}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: {{ .Values.infra.postgresql.containerPort }}
+              name: postgres
+          env:
+            - name: POSTGRES_USER
+              value: "{{ .Values.infra.postgresql.env.POSTGRES_USER }}"
+            - name: POSTGRES_PASSWORD
+              value: "{{ .Values.infra.postgresql.env.POSTGRES_PASSWORD }}"
+            - name: POSTGRES_DB
+              value: "{{ .Values.infra.postgresql.env.POSTGRES_DB }}"
+            - name: PGDATA                     # кладём БД в подкаталог, чтобы обойти lost+found
+              value: "/var/lib/postgresql/data/pgdata"
+          resources: {{- toYaml .Values.infra.postgresql.resources | nindent 12 }}
+          volumeMounts:
+            - name: postgresql-data
+              mountPath: /var/lib/postgresql/data
+  volumeClaimTemplates:
+    - metadata:
+        name: postgresql-data         # совпадает с volumeMounts.name
+      spec:
+        accessModes:
+          - {{ .Values.infra.postgresql.storage.accessMode }}
+        resources:
+          requests:
+            storage: {{ .Values.infra.postgresql.storage.size }}
+        {{- if .Values.infra.postgresql.storage.storageClassName }}
+        storageClassName: {{ .Values.infra.postgresql.storage.storageClassName | quote }}
+        {{- end }}
