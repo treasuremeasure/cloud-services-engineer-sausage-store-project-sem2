@@ -12,8 +12,7 @@ metadata:
     app.kubernetes.io/part-of: {{.Release.Name}}
 spec:
   revisionHistoryLimit: {{.Values.revisionHistoryLimit}}
-  replicas: {{.Values.replicas}}
-   strategy:
+  strategy:
 {{ toYaml .Values.strategy | indent 4 }}
   selector:
     matchLabels:

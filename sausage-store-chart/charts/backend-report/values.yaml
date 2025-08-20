@@ -4,12 +4,6 @@ env:
 strategy:
     type: Recreate
 revisionHistoryLimit: 15
-replicas: 1
-strategy:
- type: Recreate
- rollingUpdate:
-    maxUnavailable: 1
-    maxSurge: 1
 annotations:
     path: /actuator/prometheus
     port: "8080"
@@ -24,3 +18,14 @@ resources:
     limits:
       memory: "256Mi"
       cpu: "1"
+hpa:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 3
+  metrics:
+    cpu:
+      enabled: true
+      averageUtilization: 50
+    memory:
+      enabled: false
+      averageUtilization: 70
