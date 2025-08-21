@@ -9,7 +9,7 @@ env:
   NEXUS_HELM_REPO: ${{ secrets.NEXUS_HELM_REPO }}
   NEXUS_HELM_REPO_USER: ${{ secrets.NEXUS_HELM_REPO_USER }}
   NEXUS_HELM_REPO_PASSWORD: ${{ secrets.NEXUS_HELM_REPO_PASSWORD }}
-  SAUSAGE_STORE_NAMESPACE: YOUR_NAMESPACE
+  SAUSAGE_STORE_NAMESPACE: r-devops-magistracy-project-2sem-920037519
   KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
   VAULT_TOKEN: ${{ secrets.VAULT_TOKEN }}
 
@@ -56,13 +56,13 @@ jobs:
           with:
             context: ./frontend/
             push: true
-            tags: YOUR_DOCKERHUB/sausage-frontend:latest
+            tags: treasuremeasure/sausage-frontend:latest
         - name: Push Backend-report to DockerHub
           uses: docker/build-push-action@v4
           with:
             context: ./backend-report/
             push: true
-            tags: YOUR_DOCKERHUB/sausage-backend-report:latest
+            tags: treasuremeasure/sausage-backend-report:latest
   # Упаковываем helm-чарт и пушим его в Nexus
   add_helm_chart_to_nexus:
       name: Add Helm Chart To Nexus
@@ -70,6 +70,36 @@ jobs:
       needs: build_and_push_to_docker_hub
 
       steps:
+        - name: Checkout
+          uses: actions/checkout@v4
+
+        - name: Setup Helm
+          uses: azure/setup-helm@v4
+          with:
+            helm-version: v3.14.4
+
+        - name: Lint chart
+          run: helm lint "${{ vars.CHART_DIR || 'charts/backend' }}"
+
+        - name: Build dependencies
+          run: helm dependency build "${{ vars.CHART_DIR || 'charts/backend' }}"
+
+        - name: Package chart
+          run: |
+            mkdir -p dist
+            helm package "${{ vars.CHART_DIR || 'charts/backend' }}" --destination dist
+
+        - name: Get packaged file name
+          id: chart
+          run: echo "file=$(ls dist/*.tgz)" >> "$GITHUB_OUTPUT"
+
+        - name: Upload chart to Nexus (helm-hosted)
+          run: |
+          # Загрузка tgz в hosted репозиторий Nexus. index.yaml Nexus обновит сам.
+          curl -fSL -u "$NEXUS_HELM_REPO_USER:$NEXUS_HELM_REPO_PASSWORD" \
+            --upload-file "${{ steps.chart.outputs.file }}" \
+            "$NEXUS_HELM_REPO
+
       #### Опишите необходимые шаги
 
   # Деплоим приложения в кластер Kubernetes с помощью helm-чарт

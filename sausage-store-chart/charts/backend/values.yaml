@@ -29,21 +29,19 @@ resources:
 containerPort: 8080
 livenessProbe:
   httpGet:
-    path: /actuator/health        # стандартная точка Spring Boot
-    port: 8080                    # = containerPort
-  initialDelaySeconds: 30         # под успеет запуститься и поднять контекст
-  periodSeconds: 10               # проверяем каждые 10 с
-  timeoutSeconds: 5               # запрос должен уложиться в 5 с
-  failureThreshold: 3             # 3 фейла подряд → kube‑restart
+    path: /actuator/health        
+    port: 8080                    
+  initialDelaySeconds: 30         
+  periodSeconds: 10               
+  timeoutSeconds: 5               
+  failureThreshold: 3             
   successThreshold: 1      
-### Опишите LivenessProbe для бэкенда
 vpa:
   enabled: true
-  updateMode: "Auto"         # «сама» корректирует ресурсы
-  minAllowed:                # не опускаться ниже requests
+  updateMode: "Auto"         
+  minAllowed:                
     cpu: "100m"
     memory: "256Mi"
-  maxAllowed:                # и не разрастись больше limits
-    cpu: "1"                 # = 1 vCPU
+  maxAllowed:               
+    cpu: "1"                 
     memory: "512Mi"
-### Опишите VPA для бэкенда
