@@ -92,12 +92,12 @@ jobs:
         env:
           NEXUS_HELM_REPO: ${{ env.NEXUS_HELM_REPO }}
           NEXUS_HELM_REPO_USER: ${{ env.NEXUS_HELM_REPO_USER }}
-          NEXUS_HELM_REPO_PASSWORD: ${{ env.NEXUS_HELM_REPO_PASSWORD }}
+          EXUS_HELM_REPO_PASSWORD: ${{ env.NEXUS_HELM_REPO_PASSWORD }}
         run: |
-        # Загрузка tgz в hosted-репозиторий Nexus. index.yaml обновит сам.
-        curl -fSL -u "$NEXUS_HELM_REPO_USER:$NEXUS_HELM_REPO_PASSWORD" \
-          --upload-file "${{ steps.chart.outputs.file }}" \
-          "$NEXUS_HELM_REPO/"
+          # Загрузка tgz в hosted-репозиторий Nexus. index.yaml обновится сам.
+          curl -fSL -u "$NEXUS_HELM_REPO_USER:$NEXUS_HELM_REPO_PASSWORD" \
+          - -upload-file "${{ steps.chart.outputs.file }}" \
+           "$NEXUS_HELM_REPO/"
 
       
 
