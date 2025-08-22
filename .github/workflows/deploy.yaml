@@ -90,18 +90,16 @@ jobs:
 
       - name: Upload chart to Nexus (helm-hosted)
         env:
-          URL: ${{ env.NEXUS_HELM_REPO }}
-          USER: ${{ env.NEXUS_HELM_REPO_USER }}
-          PASS: ${{ env.NEXUS_HELM_REPO_PASSWORD }}
+          NEXUS_HELM_REPO: ${{ env.NEXUS_HELM_REPO }}
+          NEXUS_HELM_REPO_USER: ${{ env.NEXUS_HELM_REPO_USER }}
+          NEXUS_HELM_REPO_PASSWORD: ${{ env.NEXUS_HELM_REPO_PASSWORD }}
         run: |
-          # Пример: URL = https://nexus.example.com/repository/helm-hosted
-          # Nexus сам обновит index.yaml у hosted-репозитория.
-          curl -fSL -u "$USER:$PASS" \
-            --upload-file "${{ steps.chart.outputs.file }}" \
-            "$URL/"
+        # Загрузка tgz в hosted-репозиторий Nexus. index.yaml обновит сам.
+        curl -fSL -u "$NEXUS_HELM_REPO_USER:$NEXUS_HELM_REPO_PASSWORD" \
+          --upload-file "${{ steps.chart.outputs.file }}" \
+          "$NEXUS_HELM_REPO/"
 
-      - name: Print uploaded chart
-        run: echo "Uploaded: ${{ steps.chart.outputs.file }}"
+      
 
   # --- 3) Деплой из Nexus в кластер Kubernetes ---
   deploy_helm_chart_to_kubernetes:
