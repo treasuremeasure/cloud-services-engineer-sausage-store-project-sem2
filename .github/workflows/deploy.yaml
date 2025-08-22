@@ -6,14 +6,14 @@ on:
       - main
 
 env:
-  NEXUS_HELM_REPO: ${{ secrets.NEXUS_HELM_REPO }}              # например: https://nexus.example.com/repository/helm-hosted
+  NEXUS_HELM_REPO: ${{ secrets.NEXUS_HELM_REPO }}              # https://nexus.example.com/repository/helm-hosted
   NEXUS_HELM_REPO_USER: ${{ secrets.NEXUS_HELM_REPO_USER }}
   NEXUS_HELM_REPO_PASSWORD: ${{ secrets.NEXUS_HELM_REPO_PASSWORD }}
   SAUSAGE_STORE_NAMESPACE: r-devops-magistracy-project-2sem-920037519
   KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
   VAULT_TOKEN: ${{ secrets.VAULT_TOKEN }}
-  CHART_DIR: charts/sausage-store                               # путь к UMBRELLA чарту
-  RELEASE_NAME: sausage-store                                   # имя релиза Helm
+  CHART_DIR: charts/sausage-store                               # Путь к UMBRELLA-чарту
+  RELEASE_NAME: sausage-store
 
 jobs:
   # --- 1) Сборка и пуш образов в Docker Hub ---
@@ -33,14 +33,21 @@ jobs:
           username: ${{ secrets.DOCKER_USER }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Push Backend to DockerHub
+      # Версию используем только для backend. Возьмём SHA коммита.
+      - name: Define version
+        id: vars
+        run: echo "VERSION=${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+
+      - name: Push Backend to DockerHub (with VERSION build-arg)
         uses: docker/build-push-action@v4
         with:
           context: ./backend/
           push: true
-          tags: ${{ secrets.DOCKER_USER }}/sausage-backend:latest
+          tags: |
+            ${{ secrets.DOCKER_USER }}/sausage-backend:latest
+            ${{ secrets.DOCKER_USER }}/sausage-backend:${{ steps.vars.outputs.VERSION }}
           build-args: |
-            VERSION=${{ github.sha }}
+            VERSION=${{ steps.vars.outputs.VERSION }}
 
       - name: Push Frontend to DockerHub
         uses: docker/build-push-action@v4
@@ -71,9 +78,7 @@ jobs:
         with:
           helm-version: v3.14.4
 
-      # Если в umbrella есть dependencies: file://charts/<subchart>,
-      # подтянем/упакуем подчарты в charts/*.tgz
-      - name: Build dependencies
+      - name: Build dependencies (umbrella)
         run: helm dependency build "${{ env.CHART_DIR }}"
 
       - name: Lint umbrella
@@ -92,46 +97,11 @@ jobs:
         env:
           NEXUS_HELM_REPO: ${{ env.NEXUS_HELM_REPO }}
           NEXUS_HELM_REPO_USER: ${{ env.NEXUS_HELM_REPO_USER }}
-          EXUS_HELM_REPO_PASSWORD: ${{ env.NEXUS_HELM_REPO_PASSWORD }}
+          NEXUS_HELM_REPO_PASSWORD: ${{ env.NEXUS_HELM_REPO_PASSWORD }}
         run: |
           # Загрузка tgz в hosted-репозиторий Nexus. index.yaml обновится сам.
           curl -fSL -u "$NEXUS_HELM_REPO_USER:$NEXUS_HELM_REPO_PASSWORD" \
-          - -upload-file "${{ steps.chart.outputs.file }}" \
-           "$NEXUS_HELM_REPO/"
+            --upload-file "${{ steps.chart.outputs.file }}" \
+            "$NEXUS_HELM_REPO/"
 
-      
-
-  # --- 3) Деплой из Nexus в кластер Kubernetes ---
-  deploy_helm_chart_to_kubernetes:
-    name: Deploy Helm Chart To Kubernetes
-    runs-on: ubuntu-latest
-    needs: add_helm_chart_to_nexus
-
-    steps:
-      - name: Setup Helm
-        uses: azure/setup-helm@v4
-        with:
-          helm-version: v3.14.4
-
-      - name: Prepare kubeconfig
-        run: |
-          mkdir -p $HOME/.kube
-          echo "${KUBE_CONFIG}" > $HOME/.kube/config
-          chmod 600 $HOME/.kube/config
-
-      - name: Add Nexus Helm repo
-        run: |
-          helm repo add sausage "${{ env.NEXUS_HELM_REPO }}" \
-            --username "${{ env.NEXUS_HELM_REPO_USER }}" \
-            --password "${{ env.NEXUS_HELM_REPO_PASSWORD }}"
-          helm repo update
-
-      # Если есть внешний values для окружения, подставь файл:
-      #   --values deploy/values-prod.yaml
-      # Если чарты именованы иначе — поправь имя пакета после "sausage/"
-      - name: Helm upgrade/install umbrella
-        run: |
-          helm upgrade --install "${{ env.RELEASE_NAME }}" "sausage/sausage-store" \
-            --namespace "${{ env.SAUSAGE_STORE_NAMESPACE }}" \
-            --create-namespace \
-            --wait --timeout 10m
+     
