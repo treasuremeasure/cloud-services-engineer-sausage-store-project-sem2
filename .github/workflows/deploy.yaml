@@ -6,107 +6,134 @@ on:
       - main
 
 env:
-  NEXUS_HELM_REPO: ${{ secrets.NEXUS_HELM_REPO }}
+  NEXUS_HELM_REPO: ${{ secrets.NEXUS_HELM_REPO }}              # например: https://nexus.example.com/repository/helm-hosted
   NEXUS_HELM_REPO_USER: ${{ secrets.NEXUS_HELM_REPO_USER }}
   NEXUS_HELM_REPO_PASSWORD: ${{ secrets.NEXUS_HELM_REPO_PASSWORD }}
   SAUSAGE_STORE_NAMESPACE: r-devops-magistracy-project-2sem-920037519
   KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
   VAULT_TOKEN: ${{ secrets.VAULT_TOKEN }}
+  CHART_DIR: charts/sausage-store                               # путь к UMBRELLA чарту
+  RELEASE_NAME: sausage-store                                   # имя релиза Helm
 
 jobs:
-  # Сборка и пуш образов в докерхаб:
+  # --- 1) Сборка и пуш образов в Docker Hub ---
   build_and_push_to_docker_hub:
-      name: Push Docker image to DockerHub
-      runs-on: ubuntu-latest
-      steps:
-        - name: Check out the repo
-          # Получение исходного кода из репозитория:
-          uses: actions/checkout@v3
-        - name: Set up Docker Buildx
-          # Установка сборщика контейнеров Docker:
-          uses: docker/setup-buildx-action@v2
-        - name: Login to Docker 
-          # Авторизация на Docker Hub:
-          uses: docker/login-action@v2
-          # При помощи with передаём в action параметры username и password:
-          with:
-            username: ${{ secrets.DOCKER_USER }}
-            password: ${{ secrets.DOCKER_PASSWORD }}
-            # Хорошо ли держать логин и пароль прямо в коде workflow?
-            # Нет, это нехорошо. Хранить пароль надо в Secrets.
-        - name: Push Backend to DockerHub
-          # Одновременный билд и пуш образа в Docker Hub:
-          uses: docker/build-push-action@v4
-          with:
-            # Параметр context: ./backend/ указывает, что нужный Dockerfile 
-            # находится в ./backend/
-            context: ./backend/
-            # Параметр push: true указывает, что образ нужно не только собрать,
-            # но и отправить на Docker Hub:
-            push: true
-            # В параметре tags задаётся название и тег для образа.
-            # Для каждого пересобранного образа 
-            # устанавливаем тег latest, чтобы потом
-            # на сервере и в docker-compose.yml не указывать версию образа:
-            tags: YOUR_DOCKERHUB/sausage-backend:latest
-            build-args: |
-              VERSION=${{ github.sha }}
-        - name: Push Frontend to DockerHub
-          uses: docker/build-push-action@v4
-          with:
-            context: ./frontend/
-            push: true
-            tags: treasuremeasure/sausage-frontend:latest
-        - name: Push Backend-report to DockerHub
-          uses: docker/build-push-action@v4
-          with:
-            context: ./backend-report/
-            push: true
-            tags: treasuremeasure/sausage-backend-report:latest
-  # Упаковываем helm-чарт и пушим его в Nexus
+    name: Push Docker image to DockerHub
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to Docker
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USER }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Push Backend to DockerHub
+        uses: docker/build-push-action@v4
+        with:
+          context: ./backend/
+          push: true
+          tags: ${{ secrets.DOCKER_USER }}/sausage-backend:latest
+          build-args: |
+            VERSION=${{ github.sha }}
+
+      - name: Push Frontend to DockerHub
+        uses: docker/build-push-action@v4
+        with:
+          context: ./frontend/
+          push: true
+          tags: ${{ secrets.DOCKER_USER }}/sausage-frontend:latest
+
+      - name: Push Backend-report to DockerHub
+        uses: docker/build-push-action@v4
+        with:
+          context: ./backend-report/
+          push: true
+          tags: ${{ secrets.DOCKER_USER }}/sausage-backend-report:latest
+
+  # --- 2) Пакуем UMBRELLA и пушим в Nexus (helm-hosted) ---
   add_helm_chart_to_nexus:
-      name: Add Helm Chart To Nexus
-      runs-on: ubuntu-latest
-      needs: build_and_push_to_docker_hub
+    name: Add Helm Chart To Nexus
+    runs-on: ubuntu-latest
+    needs: build_and_push_to_docker_hub
 
-      steps:
-        - name: Checkout
-          uses: actions/checkout@v4
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-        - name: Setup Helm
-          uses: azure/setup-helm@v4
-          with:
-            helm-version: v3.14.4
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+        with:
+          helm-version: v3.14.4
 
-        - name: Lint chart
-          run: helm lint "${{ vars.CHART_DIR || 'charts/backend' }}"
+      # Если в umbrella есть dependencies: file://charts/<subchart>,
+      # подтянем/упакуем подчарты в charts/*.tgz
+      - name: Build dependencies
+        run: helm dependency build "${{ env.CHART_DIR }}"
 
-        - name: Build dependencies
-          run: helm dependency build "${{ vars.CHART_DIR || 'charts/backend' }}"
+      - name: Lint umbrella
+        run: helm lint "${{ env.CHART_DIR }}"
 
-        - name: Package chart
-          run: |
-            mkdir -p dist
-            helm package "${{ vars.CHART_DIR || 'charts/backend' }}" --destination dist
+      - name: Package umbrella
+        run: |
+          mkdir -p dist
+          helm package "${{ env.CHART_DIR }}" --destination dist
 
-        - name: Get packaged file name
-          id: chart
-          run: echo "file=$(ls dist/*.tgz)" >> "$GITHUB_OUTPUT"
+      - name: Get packaged file name
+        id: chart
+        run: echo "file=$(ls dist/*.tgz)" >> "$GITHUB_OUTPUT"
 
-        - name: Upload chart to Nexus (helm-hosted)
-          run: |
-          # Загрузка tgz в hosted репозиторий Nexus. index.yaml Nexus обновит сам.
-          curl -fSL -u "$NEXUS_HELM_REPO_USER:$NEXUS_HELM_REPO_PASSWORD" \
+      - name: Upload chart to Nexus (helm-hosted)
+        env:
+          URL: ${{ env.NEXUS_HELM_REPO }}
+          USER: ${{ env.NEXUS_HELM_REPO_USER }}
+          PASS: ${{ env.NEXUS_HELM_REPO_PASSWORD }}
+        run: |
+          # Пример: URL = https://nexus.example.com/repository/helm-hosted
+          # Nexus сам обновит index.yaml у hosted-репозитория.
+          curl -fSL -u "$USER:$PASS" \
             --upload-file "${{ steps.chart.outputs.file }}" \
-            "$NEXUS_HELM_REPO
+            "$URL/"
 
-      #### Опишите необходимые шаги
+      - name: Print uploaded chart
+        run: echo "Uploaded: ${{ steps.chart.outputs.file }}"
 
-  # Деплоим приложения в кластер Kubernetes с помощью helm-чарт
+  # --- 3) Деплой из Nexus в кластер Kubernetes ---
   deploy_helm_chart_to_kubernetes:
-      name: Deploy Helm Chart To Kubernetes
-      runs-on: ubuntu-latest
-      needs: add_helm_chart_to_nexus
+    name: Deploy Helm Chart To Kubernetes
+    runs-on: ubuntu-latest
+    needs: add_helm_chart_to_nexus
 
-      steps:
-      #### Опишите необходимые шаги
+    steps:
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+        with:
+          helm-version: v3.14.4
+
+      - name: Prepare kubeconfig
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${KUBE_CONFIG}" > $HOME/.kube/config
+          chmod 600 $HOME/.kube/config
+
+      - name: Add Nexus Helm repo
+        run: |
+          helm repo add sausage "${{ env.NEXUS_HELM_REPO }}" \
+            --username "${{ env.NEXUS_HELM_REPO_USER }}" \
+            --password "${{ env.NEXUS_HELM_REPO_PASSWORD }}"
+          helm repo update
+
+      # Если есть внешний values для окружения, подставь файл:
+      #   --values deploy/values-prod.yaml
+      # Если чарты именованы иначе — поправь имя пакета после "sausage/"
+      - name: Helm upgrade/install umbrella
+        run: |
+          helm upgrade --install "${{ env.RELEASE_NAME }}" "sausage/sausage-store" \
+            --namespace "${{ env.SAUSAGE_STORE_NAMESPACE }}" \
+            --create-namespace \
+            --wait --timeout 10m
