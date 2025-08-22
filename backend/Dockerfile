@@ -14,7 +14,9 @@ RUN mvn -B dependency:go-offline
 
 # копируем исходники и собираем
 COPY src ./src
-RUN mvn -B package -DskipTests -Dversion.application=${VERSION}
+RUN mvn -B -DskipTests \
+    -Dproject.build.finalName=sausage-store-${VERSION} \
+    package
 
 ############################
 # 2.  RUNTIME stage (JRE)  #
@@ -32,8 +34,8 @@ RUN addgroup -S jaruser \
  && chown -R jaruser:jaruser /logs /app
 
 # копируем JAR из build‑стадии
-COPY --chown=jaruser:jaruser \
-     --from=build /src/target/sausage-store-${VERSION}.jar /app/sausage-store.jar
+COPY --chown=jaruser:jaruser --from=build \
+     /src/target/sausage-store-${VERSION}.jar /app/sausage-store.jar
 
 EXPOSE 8080
 USER jaruser
