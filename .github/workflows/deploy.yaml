@@ -97,21 +97,18 @@ jobs:
         id: chart
         run: echo "file=$(ls dist/*.tgz)" >> "$GITHUB_OUTPUT"
 
-      - name: Upload chart to Nexus (helm-hosted)
-        env:
-           URL: ${{ env.NEXUS_HELM_REPO }}                # например: https://nexus.example.com/repository/helm-hosted
-           USER: ${{ env.NEXUS_HELM_REPO_USER }}
-           PASS: ${{ env.NEXUS_HELM_REPO_PASSWORD }}
-           FILE: ${{ steps.chart.outputs.file }}
+      - name: Install helm-push plugin
+        run: helm plugin install https://github.com/chartmuseum/helm-push.git
+
+      - name: Add Nexus Helm repo
         run: |
-           set -euo pipefail
-           BN=$(basename "$FILE")
-           echo "Uploading $BN to $URL ..."
-           # без -L, с явным content-type и именем файла в URL
-           curl -fS -u "$USER:$PASS" \
-           -H "Content-Type: application/gzip" \
-           --upload-file "$FILE" \
-           "$URL/$BN"
+         helm repo add nexus "${NEXUS_HELM_REPO}" \
+         --username "${NEXUS_HELM_REPO_USER}" \
+         --password "${NEXUS_HELM_REPO_PASSWORD}"
+         helm repo update
+
+      - name: Push chart via helm-push
+        run: helm cm-push dist/*.tgz nexus
 
   deploy_helm_chart_to_kubernetes:
       name: Deploy Helm Chart To Kubernetes
