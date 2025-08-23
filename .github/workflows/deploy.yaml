@@ -12,7 +12,7 @@ env:
   SAUSAGE_STORE_NAMESPACE: r-devops-magistracy-project-2sem-920037519
   KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
   VAULT_TOKEN: ${{ secrets.VAULT_TOKEN }}
-  CHART_DIR: charts/sausage-store                               # Путь к UMBRELLA-чарту
+  CHART_DIR: .                            # Путь к UMBRELLA-чарту
   RELEASE_NAME: sausage-store
 
 jobs:
