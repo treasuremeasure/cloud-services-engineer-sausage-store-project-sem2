@@ -151,3 +151,28 @@ jobs:
               --wait --timeout 20m \
               --debug \
               --atomic
+
+        - name: Debug non-ready pods
+          if: always()
+          run: |
+            echo "=== Pods status ==="
+            kubectl -n "${SAUSAGE_STORE_NAMESPACE}" get pods -o wide
+
+            echo "=== Recent events ==="
+            kubectl -n "${SAUSAGE_STORE_NAMESPACE}" get events --sort-by=.lastTimestamp | tail -n 50
+
+            echo "=== Describe & logs for non-ready pods ==="
+            for pod in $(kubectl -n "${SAUSAGE_STORE_NAMESPACE}" get pods --no-headers | awk '$2 !~ /^[1-9]/ {print $1}'); do
+      
+              echo "------ $pod ------"
+              kubectl -n "${SAUSAGE_STORE_NAMESPACE}" describe pod "$pod" || true
+      
+              echo "--- Logs (current) ---"
+              kubectl -n "${SAUSAGE_STORE_NAMESPACE}" logs "$pod" || true
+            
+              echo "--- Logs (previous) ---"
+              kubectl -n "${SAUSAGE_STORE_NAMESPACE}" logs "$pod" --previous || true
+            
+              echo
+           
+            done
