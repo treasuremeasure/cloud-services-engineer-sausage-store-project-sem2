@@ -98,14 +98,39 @@ jobs:
         run: echo "file=$(ls dist/*.tgz)" >> "$GITHUB_OUTPUT"
 
       - name: Upload chart to Nexus (helm-hosted)
-        env:
-          NEXUS_HELM_REPO: ${{ env.NEXUS_HELM_REPO }}
-          NEXUS_HELM_REPO_USER: ${{ env.NEXUS_HELM_REPO_USER }}
-          NEXUS_HELM_REPO_PASSWORD: ${{ env.NEXUS_HELM_REPO_PASSWORD }}
         run: |
           # Загрузка tgz в hosted-репозиторий Nexus. index.yaml обновится сам.
           curl -fSL -u "$NEXUS_HELM_REPO_USER:$NEXUS_HELM_REPO_PASSWORD" \
             --upload-file "${{ steps.chart.outputs.file }}" \
             "$NEXUS_HELM_REPO/"
 
-     
+  deploy_helm_chart_to_kubernetes:
+      name: Deploy Helm Chart To Kubernetes
+      runs-on: ubuntu-latest
+      needs: add_helm_chart_to_nexus
+
+      steps:
+        
+        - name: Setup Helm
+          uses: azure/setup-helm@v4
+          with:
+            helm-version: v3.14.4
+
+        - name: Prepare kubeconfig
+          run: |
+              mkdir -p $HOME/.kube
+              echo "${KUBE_CONFIG}" > $HOME/.kube/config
+              chmod 600 $HOME/.kube/config
+
+        - name: Helm repo add
+          run:  |
+              helm repo add nexus $NEXUS_HELM_REPO --username $NEXUS_HELM_REPO_USER --password $NEXUS_HELM_REPO_PASSWORD
+              helm repo update
+        
+        - name: Deploy umbrella chart
+          run: |
+              # nexus/sausage-store — имя репо/пакета (name из Chart.yaml)
+              helm upgrade --install "${RELEASE_NAME}" "nexus/sausage-store" \
+              --namespace "${SAUSAGE_STORE_NAMESPACE}" \
+              --create-namespace \
+              --wait --timeout 10m
