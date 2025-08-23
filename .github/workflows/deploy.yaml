@@ -70,6 +70,8 @@ jobs:
   # --- 2) Пакуем UMBRELLA и пушим в Nexus (helm-hosted) ---
   add_helm_chart_to_nexus:
     name: Add Helm Chart To Nexus
+    outputs:
+      chart_version: ${{ steps.chartver.outputs.CHART_VERSION }}
     runs-on: ubuntu-latest
     needs: build_and_push_to_docker_hub
 
@@ -88,27 +90,35 @@ jobs:
       - name: Lint umbrella
         run: helm lint "${{ env.CHART_DIR }}"
 
+      - name: Define chart version
+        id: chartver
+        run: echo "CHART_VERSION=1.0.${GITHUB_RUN_NUMBER}" >> $GITHUB_OUTPUT
+
       - name: Package umbrella
         run: |
-          mkdir -p dist
-          helm package "${{ env.CHART_DIR }}" --destination dist
+           mkdir -p dist
+           helm package "${{ env.CHART_DIR }}" \
+           --version "${{ steps.chartver.outputs.CHART_VERSION }}" \
+           --app-version "${{ steps.chartver.outputs.CHART_VERSION }}" \
+           --destination dist
 
       - name: Get packaged file name
         id: chart
         run: echo "file=$(ls dist/*.tgz)" >> "$GITHUB_OUTPUT"
 
-      - name: Install helm-push plugin
-        run: helm plugin install https://github.com/chartmuseum/helm-push.git
-
-      - name: Add Nexus Helm repo
+      - name: Upload chart to Nexus (helm-hosted)
+        env:
+          URL: ${{ env.NEXUS_HELM_REPO }}
+          USER: ${{ env.NEXUS_HELM_REPO_USER }}
+          PASS: ${{ env.NEXUS_HELM_REPO_PASSWORD }}
+          FILE: ${{ steps.chart.outputs.file }}
         run: |
-         helm repo add nexus "${NEXUS_HELM_REPO}" \
-         --username "${NEXUS_HELM_REPO_USER}" \
-         --password "${NEXUS_HELM_REPO_PASSWORD}"
-         helm repo update
-
-      - name: Push chart via helm-push
-        run: helm cm-push dist/*.tgz nexus
+          set -euo pipefail
+          BN=$(basename "$FILE")
+          curl -fS -u "$USER:$PASS" \
+          -H "Content-Type: application/gzip" \
+          --upload-file "$FILE" \
+           "$URL/$BN"
 
   deploy_helm_chart_to_kubernetes:
       name: Deploy Helm Chart To Kubernetes
@@ -135,8 +145,8 @@ jobs:
         
         - name: Deploy umbrella chart
           run: |
-              # nexus/sausage-store — имя репо/пакета (name из Chart.yaml)
-              helm upgrade --install "${RELEASE_NAME}" "nexus/sausage-store" \
-              --namespace "${SAUSAGE_STORE_NAMESPACE}" \
-              --create-namespace \
-              --wait --timeout 10m
+            helm upgrade --install "${RELEASE_NAME}" "nexus/sausage-store" \
+            --namespace "${SAUSAGE_STORE_NAMESPACE}" \
+            --create-namespace \
+            --version "${{ needs.add_helm_chart_to_nexus.outputs.chart_version }}" \
+            --wait --timeout 10m
