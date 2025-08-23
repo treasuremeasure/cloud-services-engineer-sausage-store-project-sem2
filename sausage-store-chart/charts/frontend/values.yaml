@@ -10,7 +10,7 @@ ingress:
   pathType: Prefix
 containerPort: 80
 image: treasuremeasure/sausage-frontend:latest
-imagePullPolicy: IfNotPresent   
+imagePullPolicy: Always   
 resources:
   requests:
     cpu: "200m"

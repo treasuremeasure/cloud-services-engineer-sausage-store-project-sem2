@@ -147,8 +147,8 @@ jobs:
               set -euxo pipefail
               helm upgrade --install "${RELEASE_NAME}" "nexus/sausage-store" \
               --namespace "${SAUSAGE_STORE_NAMESPACE}" \
-              --version "1.0.16" \
-              --wait --timeout 20m \
+              --version "1.0.0" \
+              --wait --timeout 10m \
               --debug \
               --atomic
 

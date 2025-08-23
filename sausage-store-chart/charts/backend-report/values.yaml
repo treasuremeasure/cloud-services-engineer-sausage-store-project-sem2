@@ -9,6 +9,7 @@ annotations:
     port: "8080"
     scrape: "true"
 image: treasuremeasure/sausage-backend-report:latest
+imagePullPolicy: Always
 service:
     port: 8082
 resources:
