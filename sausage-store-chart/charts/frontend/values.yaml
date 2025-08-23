@@ -9,7 +9,7 @@ ingress:
   path: /
   pathType: Prefix
 containerPort: 80
-image: treasuremeasure/my-angular-app:latest
+image: treasuremeasure/sausage-frontend:latest
 imagePullPolicy: IfNotPresent   
 resources:
   requests:

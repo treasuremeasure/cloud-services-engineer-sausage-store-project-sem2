@@ -17,7 +17,7 @@ strategy:
  rollingUpdate:
     maxUnavailable: 1
     maxSurge: 1
-image: treasuremeasure/my-java-app:latest
+image: treasuremeasure/sausage-backend:1.0.0
 imagePullPolicy: Always
 resources:
     requests:
