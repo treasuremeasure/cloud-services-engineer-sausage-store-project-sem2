@@ -98,16 +98,11 @@ jobs:
         run: echo "file=$(ls dist/*.tgz)" >> "$GITHUB_OUTPUT"
 
       - name: Upload chart to Nexus (helm-hosted)
-        env:
-          NEXUS_URL: ${{ secrets.NEXUS_URL }}
-          NEXUS_REPO: ${{ secrets.NEXUS_REPO }}
-          NEXUS_USERNAME: ${{ secrets.NEXUS_USERNAME }}
-          NEXUS_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
         run: |
-          # Загрузка tgz в hosted репозиторий Nexus. index.yaml Nexus обновит сам.
-          curl -fSL -u "$NEXUS_USERNAME:$NEXUS_PASSWORD" \
+          # Загрузка tgz в hosted-репозиторий Nexus. index.yaml обновится сам.
+          curl -fSL -u "$NEXUS_HELM_REPO_USER:$NEXUS_HELM_REPO_PASSWORD" \
             --upload-file "${{ steps.chart.outputs.file }}" \
-            "$NEXUS_URL/repository/$NEXUS_REPO/"
+            "$NEXUS_HELM_REPO/"
 
   deploy_helm_chart_to_kubernetes:
       name: Deploy Helm Chart To Kubernetes
