@@ -2,7 +2,7 @@ apiVersion: v2
 type: application
 name: sausage-store
 description: Sausage Store Helm Chart
-version: 1.0.0
+version: 0.0.0
 appVersion: "latest"
 
 dependencies:
