@@ -42,7 +42,7 @@ data:
                 proxy_set_header X-Forwarded-Proto $scheme;
 
           # Прокидываем путь как есть (со включённым /api/)
-          proxy_pass http://backend-backend-service:8080;
+          proxy_pass http://sausage-store-backend-service:8080;
             
             }
 
