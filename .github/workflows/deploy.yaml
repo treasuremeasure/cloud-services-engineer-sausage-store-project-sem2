@@ -38,29 +38,33 @@ jobs:
         id: vars
         run: echo "VERSION=${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
 
-      - name: Push Backend to DockerHub (with VERSION build-arg)
-        uses: docker/build-push-action@v4
+      - name: Build & Push backend (multi-arch, VERSION=1.0.0)
+        uses: docker/build-push-action@v5
         with:
-          context: ./backend/
+          context: ./backend
           push: true
+          platforms: linux/amd64,linux/arm64
+          build-args: |
+            VERSION=1.0.0
           tags: |
             ${{ secrets.DOCKER_USER }}/sausage-backend:latest
-            ${{ secrets.DOCKER_USER }}/sausage-backend:${{ steps.vars.outputs.VERSION }}
-          build-args: |
-            VERSION=${{ steps.vars.outputs.VERSION }}
+            ${{ secrets.DOCKER_USER }}/sausage-backend:1.0.0
 
-      - name: Push Frontend to DockerHub
+
+      - name: Build & Push Frontend to DockerHub
         uses: docker/build-push-action@v4
         with:
           context: ./frontend/
           push: true
+          platforms: linux/amd64,linux/arm64
           tags: ${{ secrets.DOCKER_USER }}/sausage-frontend:latest
 
-      - name: Push Backend-report to DockerHub
+      - name: Build & Push Backend-report to DockerHub
         uses: docker/build-push-action@v4
         with:
           context: ./backend-report/
           push: true
+          platforms: linux/amd64,linux/arm64
           tags: ${{ secrets.DOCKER_USER }}/sausage-backend-report:latest
 
   # --- 2) Пакуем UMBRELLA и пушим в Nexus (helm-hosted) ---
